@@ -6,39 +6,37 @@ process makeSalmonIndex {
     container = 'quay.io/eqtlcatalogue/rnaseq:v20.11.1'
 
     input:
-    path fasta
+    path fasta 
 
     output:
-    path "${fasta.baseName}.index.tar.gz"
-
+    path "${fasta.baseName}.index"
+    
     script:
     """
     salmon index -t ${fasta} -i ${fasta.baseName}.index
-    tar -czf ${fasta.baseName}.index.tar.gz ${fasta.baseName}.index
     """
 }
 
 process salmon_quant {
-    tag "$samplename - ${index.getBaseName(3)}"
-    publishDir "${params.outdir}/Salmon/quant/${index.getBaseName(3)}/", mode: 'copy', enabled: params.saveIndividualQuants, pattern: "*.quant.sf"
+    tag "$samplename - ${index.baseName}"
+    publishDir "${params.outdir}/Salmon/quant/${index.baseName}/", mode: 'copy', enabled: params.saveIndividualQuants, pattern: "*.quant.sf"
     container = 'quay.io/eqtlcatalogue/rnaseq:v20.11.1'
 
     input:
-    tuple val(samplename), file(reads)
-    file index
+    tuple val(samplename), file(reads) 
+    each index 
 
     output:
-    tuple val("${index.getBaseName(3)}"), file("${samplename}.quant.edited.sf"), emit: salmon_quantified
+    tuple val(index.baseName), file("${samplename}.quant.edited.sf"), emit: salmon_quantified
     path '*.quant.sf'
-
+    
     script:
     def strandedness = params.unstranded ? 'U' : 'SR'
     if (params.singleEnd) {
         """
-        tar -xzf ${index}
         salmon quant --seqBias --useVBOpt --gcBias \\
                         --libType $strandedness \\
-                        --index ${index.getBaseName(2)} \\
+                        --index ${index} \\
                         -r ${reads[0]} \\
                         -p ${task.cpus} \\
                         -o .
@@ -47,10 +45,9 @@ process salmon_quant {
         """
     } else {
         """
-        tar -xzf ${index}
         salmon quant --seqBias --useVBOpt --gcBias \\
                         --libType I$strandedness \\
-                        --index ${index.getBaseName(2)} \\
+                        --index $index \\
                         -1 ${reads[0]} \\
                         -2 ${reads[1]} \\
                         -p ${task.cpus} \\
