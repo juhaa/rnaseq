@@ -24,7 +24,7 @@ process salmon_quant {
 
     input:
     tuple val(samplename), file(reads) 
-    each index 
+    each path(index)
 
     output:
     tuple val(index.baseName), file("${samplename}.quant.edited.sf"), emit: salmon_quantified
